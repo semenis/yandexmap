@@ -3,6 +3,7 @@ import requests
 import sys
 import os
 
+
 ###GUI
 class Label:
     def __init__(self, rect, text):
@@ -15,13 +16,13 @@ class Label:
         self.rendered_text = None
         self.rendered_rect = None
 
-
     def render(self, surface):
         surface.fill(self.bgcolor, self.rect)
         self.rendered_text = self.font.render(self.text, 1, self.font_color)
         self.rendered_rect = self.rendered_text.get_rect(x=self.rect.x + 2, centery=self.rect.centery)
         # выводим текст
         surface.blit(self.rendered_text, self.rendered_rect)
+
 
 class GUI:
     def __init__(self):
@@ -70,7 +71,8 @@ class Button(Label):
 
         # рисуем границу
         pygame.draw.rect(surface, color1, self.rect, 2)
-        pygame.draw.line(surface, color2, (self.rect.right - 1, self.rect.top), (self.rect.right - 1, self.rect.bottom), 2)
+        pygame.draw.line(surface, color2, (self.rect.right - 1, self.rect.top), (self.rect.right - 1, self.rect.bottom),
+                         2)
         pygame.draw.line(surface, color2, (self.rect.left, self.rect.bottom - 1),
                          (self.rect.right, self.rect.bottom - 1), 2)
         # выводим текст
@@ -81,8 +83,11 @@ class Button(Label):
             self.pressed = self.rect.collidepoint(event.pos)
             if self.rect.collidepoint(event.pos):
                 if sloy.index(self.text) < 2:
-                    self.text = sloy[sloy.index(self.text)+1]
+                    self.text = sloy[sloy.index(self.text) + 1]
+                    global curr_sloy
                     curr_sloy = self.text
+                    global changed
+                    changed = True
                 else:
                     self.text = sloy[0]
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -93,8 +98,9 @@ class Button(Label):
 
 spn = 25
 lon, lat = 133.795384, -25.694768
-sloy = ('map','sat','skl')
+sloy = ('map', 'sat', 'skl')
 curr_sloy = sloy[0]
+
 
 def map_request():
     try:
@@ -105,7 +111,7 @@ def map_request():
             "l": curr_sloy
         }
         response = requests.get(api_server, params=params)
-
+        print(curr_sloy)
         if not response:
             print("Ошибка выполнения запроса:")
             print(map_request)
@@ -116,17 +122,22 @@ def map_request():
         print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
         sys.exit(1)
 
+
+def load_image():
+    map_file = "map.png"
+    try:
+        with open(map_file, "wb") as file:
+            file.write(response.content)
+        return map_file
+    except IOError as ex:
+        print("Ошибка записи временного файла:", ex)
+        sys.exit(2)
+
+
 response = map_request()
 
 # Запишем полученное изображение в файл.
-map_file = "map.png"
-try:
-    with open(map_file, "wb") as file:
-        file.write(response.content)
-except IOError as ex:
-    print("Ошибка записи временного файла:", ex)
-    sys.exit(2)
-
+map_file = load_image()
 # Инициализируем pygame
 pygame.init()
 screen = pygame.display.set_mode((600, 450))
@@ -135,7 +146,6 @@ gui = GUI()
 
 b1 = Button((10, 65, 150, 80), sloy[0])
 
-
 # Рисуем картинку, загружаемую из только что созданного файла.
 screen.blit(pygame.image.load(map_file), (0, 0))
 gui.add_element(b1)
@@ -143,21 +153,22 @@ gui.add_element(b1)
 pygame.display.flip()
 
 running = True
+changed = True
 
 while running:
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        gui.get_event(event);
-    pygame.time.wait(10)
-    screen.blit(pygame.image.load(map_file), (0, 0))
-    # отрисовываем все GUI-элементы
+        gui.get_event(event)
+
+    if changed:
+        changed = False
+        response = map_request()
+        map_file = load_image()
+        screen.blit(pygame.image.load(map_file), (0, 0))
+
     gui.render(screen)
-    # обновляеем все GUI-элементы
     gui.update()
-
-
     pygame.display.flip()
 
 pygame.quit()
