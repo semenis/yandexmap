@@ -4,17 +4,18 @@ import sys
 import os
 
 def resize(spn, event):
-    if event.key == pygame.K_PAGEUP and spn * 1.8 <= 90:
+    if event.key == pygame.K_PAGEUP and round(spn * 1.8) <= 100:
         spn = round(spn * 1.8)
     elif event.key == pygame.K_PAGEDOWN and spn*0.5 >= 0:
         spn = round(spn * 0.5)
+    print(spn)
     return spn
 
 spn = 25
 
 response = None
 try:
-    map_request = "http://static-maps.yandex.ru/1.x/?ll=133.795384,-25.694768&spn={0},{0}&l=sat".format(str(spn))
+    map_request = "http://static-maps.yandex.ru/1.x/?ll=90,0&spn={0},{0}&l=sat".format(str(spn))
     response = requests.get(map_request)
 
     if not response:
@@ -54,8 +55,7 @@ while running:
             spn = resize(spn, event)
             response = None
             try:
-                map_request = "http://static-maps.yandex.ru/1.x/?ll=133.795384,-25.694768&spn={0},{0}&l=sat".format(
-                    str(spn))
+                map_request = "http://static-maps.yandex.ru/1.x/?ll=90,0&spn={0},{0}&l=sat".format(str(spn))
                 response = requests.get(map_request)
 
                 if not response:
