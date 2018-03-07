@@ -58,28 +58,28 @@ def move(const_change, lon, lat, spn, key, pressed):
     if pressed:
         if key == pygame.K_RIGHT:  #
             lon += const_change * spn
-            delta = "lon+"
+            delta = lon - const_change * spn
         if key == pygame.K_DOWN:  #
             lat -= const_change * spn
-            delta = lat
+            delta = "lat+"
         if key == pygame.K_LEFT:  #
             lon -= const_change * spn
-            delta = "lon-"
+            delta = lon + const_change * spn
         if key == pygame.K_UP:  #
             lat += const_change * spn
-            delta = lat
-
+            delta = "lat-"
     try:
         map_request(lon=lon, lat=lat)
 
     except:
         if type(delta) == float:
-            lat = -lat
+            lon = -(delta)
+
         elif type(delta) == str:
-            if delta == "lon-":
-                lon += const_change * spn
+            if delta == "lat-":
+                lat -= const_change * spn
             else:
-                lon -= const_change * spn
+                lat += const_change * spn
     finally:
         return lon, lat
 
@@ -95,7 +95,7 @@ map_file = load_image()
 running = True
 vistrels = []
 
-const_change, key, pressed = 0.3, None, False
+const_change, key, pressed = 0.5, None, False
 
 while running:
     for event in pygame.event.get():
@@ -104,13 +104,13 @@ while running:
 
         key, pressed = update_map(event, key, pressed)
     lon, lat = move(const_change, lon, lat, spn, key, pressed)
-    print(lon, lat)
+
     response = map_request(lon, lat)
     map_file = load_image()
 
     screen.blit(pygame.image.load(map_file), (0, 0))
     pygame.display.flip()
-    pygame.time.wait(5)
+    pygame.time.wait(10)
 
 pygame.quit()
 # Удаляем за собой файл с изображением.
