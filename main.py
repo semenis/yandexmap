@@ -82,14 +82,16 @@ class Button(Label):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.pressed = self.rect.collidepoint(event.pos)
             if self.rect.collidepoint(event.pos):
+                global changed
+                global curr_sloy
                 if sloy.index(self.text) < 2:
                     self.text = sloy[sloy.index(self.text) + 1]
-                    global curr_sloy
                     curr_sloy = self.text
-                    global changed
                     changed = True
                 else:
                     self.text = sloy[0]
+                    curr_sloy = self.text
+                    changed = True
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.pressed = False
 
