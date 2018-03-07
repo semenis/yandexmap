@@ -79,6 +79,12 @@ class Button(Label):
     def get_event(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             self.pressed = self.rect.collidepoint(event.pos)
+            if self.rect.collidepoint(event.pos):
+                if sloy.index(self.text) < 2:
+                    self.text = sloy[sloy.index(self.text)+1]
+                    curr_sloy = self.text
+                else:
+                    self.text = sloy[0]
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.pressed = False
 
@@ -87,6 +93,8 @@ class Button(Label):
 
 spn = 25
 lon, lat = 133.795384, -25.694768
+sloy = ('map','sat','skl')
+curr_sloy = sloy[0]
 
 def map_request():
     try:
@@ -94,7 +102,7 @@ def map_request():
         params = {
             "ll": ",".join([str(lon), str(lat)]),
             "spn": ",".join([str(spn), str(spn)]),
-            "l": "map"
+            "l": curr_sloy
         }
         response = requests.get(api_server, params=params)
 
@@ -124,7 +132,7 @@ pygame.init()
 screen = pygame.display.set_mode((600, 450))
 
 gui = GUI()
-sloy = ('map','sat','skl')
+
 b1 = Button((10, 65, 150, 80), sloy[0])
 
 
