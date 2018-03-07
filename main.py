@@ -3,8 +3,6 @@ import requests
 import sys
 import os
 
-spn = 25
-
 ###GUI
 class Label:
     def __init__(self, rect, text):
@@ -87,21 +85,30 @@ class Button(Label):
 
 ####
 
+spn = 25
+lon, lat = 133.795384, -25.694768
 
+def map_request():
+    try:
+        api_server = "http://static-maps.yandex.ru/1.x/"
+        params = {
+            "ll": ",".join([str(lon), str(lat)]),
+            "spn": ",".join([str(spn), str(spn)]),
+            "l": "map"
+        }
+        response = requests.get(api_server, params=params)
 
-response = None
-try:
-    map_request = "http://static-maps.yandex.ru/1.x/?ll=133.795384,-25.694768&spn={0},{0}&l=sat".format(str(spn))
-    response = requests.get(map_request)
-
-    if not response:
-        print("Ошибка выполнения запроса:")
-        print(map_request)
-        print("Http статус:", response.status_code, "(", response.reason, ")")
+        if not response:
+            print("Ошибка выполнения запроса:")
+            print(map_request)
+            print("Http статус:", response.status_code, "(", response.reason, ")")
+            sys.exit(1)
+        return response
+    except:
+        print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
         sys.exit(1)
-except:
-    print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
-    sys.exit(1)
+
+response = map_request()
 
 # Запишем полученное изображение в файл.
 map_file = "map.png"
