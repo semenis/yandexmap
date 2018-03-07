@@ -4,11 +4,10 @@ import sys
 import os
 
 def resize(spn, event):
-    print(spn)
-    if event.key == pygame.K_PAGEUP and spn < 90:
-        spn += 10
-    elif event.key == pygame.K_PAGEDOWN and spn > 0:
-        spn -= 5
+    if event.key == pygame.K_PAGEUP and spn * 1.8 <= 90:
+        spn = round(spn * 1.8)
+    elif event.key == pygame.K_PAGEDOWN and spn*0.5 >= 0:
+        spn = round(spn * 0.5)
     return spn
 
 spn = 25
