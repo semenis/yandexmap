@@ -130,13 +130,6 @@ response = map_request()
 
 # Запишем полученное изображение в файл.
 map_file = load_image()
-try:
-    with open(map_file, "wb") as file:
-        file.write(response.content)
-except IOError as ex:
-    print("Ошибка записи временного файла:", ex)
-    sys.exit(2)
-
 # Инициализируем pygame
 pygame.init()
 screen = pygame.display.set_mode((600, 450))
@@ -163,13 +156,12 @@ while running:
      
     response = map_request()
     map_file = load_image()
-    pygame.time.wait(10)
+    
     screen.blit(pygame.image.load(map_file), (0, 0))
     # отрисовываем все GUI-элементы
     gui.render(screen)
     # обновляеем все GUI-элементы
     gui.update()
-
 
     pygame.display.flip()
 
