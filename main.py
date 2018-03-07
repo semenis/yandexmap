@@ -3,10 +3,106 @@ import requests
 import sys
 import os
 
+
+###GUI
+class Label:
+    def __init__(self, rect, text):
+        self.rect = pygame.Rect(rect)
+        self.text = text
+        self.bgcolor = pygame.Color("white")
+        self.font_color = pygame.Color("gray")
+        # Рассчитываем размер шрифта в зависимости от высоты
+        self.font = pygame.font.Font(None, self.rect.height - 4)
+        self.rendered_text = None
+        self.rendered_rect = None
+
+    def render(self, surface):
+        surface.fill(self.bgcolor, self.rect)
+        self.rendered_text = self.font.render(self.text, 1, self.font_color)
+        self.rendered_rect = self.rendered_text.get_rect(x=self.rect.x + 2, centery=self.rect.centery)
+        # выводим текст
+        surface.blit(self.rendered_text, self.rendered_rect)
+
+
+class GUI:
+    def __init__(self):
+        self.elements = []
+
+    def add_element(self, element):
+        self.elements.append(element)
+
+    def render(self, surface):
+        for element in self.elements:
+            render = getattr(element, "render", None)
+            if callable(render):
+                element.render(surface)
+
+    def update(self):
+        for element in self.elements:
+            update = getattr(element, "update", None)
+            if callable(update):
+                element.update()
+
+    def get_event(self, event):
+        for element in self.elements:
+            get_event = getattr(element, "get_event", None)
+            if callable(get_event):
+                element.get_event(event)
+
+
+class Button(Label):
+    def __init__(self, rect, text):
+        super().__init__(rect, text)
+        self.bgcolor = pygame.Color("blue")
+        # при создании кнопка не нажата
+        self.pressed = False
+
+    def render(self, surface):
+        surface.fill(self.bgcolor, self.rect)
+        self.rendered_text = self.font.render(self.text, 1, self.font_color)
+        if not self.pressed:
+            color1 = pygame.Color("white")
+            color2 = pygame.Color("black")
+            self.rendered_rect = self.rendered_text.get_rect(x=self.rect.x + 5, centery=self.rect.centery)
+        else:
+            color1 = pygame.Color("black")
+            color2 = pygame.Color("white")
+            self.rendered_rect = self.rendered_text.get_rect(x=self.rect.x + 7, centery=self.rect.centery + 2)
+
+        # рисуем границу
+        pygame.draw.rect(surface, color1, self.rect, 2)
+        pygame.draw.line(surface, color2, (self.rect.right - 1, self.rect.top), (self.rect.right - 1, self.rect.bottom),
+                         2)
+        pygame.draw.line(surface, color2, (self.rect.left, self.rect.bottom - 1),
+                         (self.rect.right, self.rect.bottom - 1), 2)
+        # выводим текст
+        surface.blit(self.rendered_text, self.rendered_rect)
+
+    def get_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.pressed = self.rect.collidepoint(event.pos)
+            if self.rect.collidepoint(event.pos):
+                global changed
+                global curr_sloy
+                if sloy.index(self.text) < 2:
+                    self.text = sloy[sloy.index(self.text) + 1]
+                    curr_sloy = self.text
+                    changed = True
+                else:
+                    self.text = sloy[0]
+                    curr_sloy = self.text
+                    changed = True
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.pressed = False
+
+
+####
+
 spn = 25
 lon, lat = 133.795384, -25.694768
-sloy = ("map", "sat", "skl")
+sloy = ('map', 'sat', 'skl')
 curr_sloy = sloy[0]
+
 
 def map_request(lon=lon, lat=lat, spn=spn, map=curr_sloy):
     try:
@@ -25,11 +121,11 @@ def map_request(lon=lon, lat=lat, spn=spn, map=curr_sloy):
             sys.exit(1)
         return response
     except:
-        print(lon,lat)
+        print(lon, lat)
         print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
         sys.exit(1)
 
-# Запишем полученное изображение в файл.
+
 def load_image():
     map_file = "map.png"
     try:
@@ -46,6 +142,7 @@ def update_map(event, key, pressed):
         if event.key in [pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT, pygame.K_UP]:
             key = event.key
             pressed = True
+
     if event.type == pygame.KEYUP:
         if event.key in [pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT, pygame.K_UP]:
             key = None
@@ -68,6 +165,10 @@ def move(const_change, lon, lat, spn, key, pressed):
         if key == pygame.K_UP:  #
             lat += const_change * spn
             delta = "lat-"
+
+        global changed
+        changed = True
+
     try:
         map_request(lon=lon, lat=lat)
 
@@ -84,33 +185,39 @@ def move(const_change, lon, lat, spn, key, pressed):
         return lon, lat
 
 
+response = map_request()
 
+# Запишем полученное изображение в файл.
+map_file = load_image()
+# Инициализируем pygame
 pygame.init()
 screen = pygame.display.set_mode((600, 450))
-# Рисуем картинку, загружаемую из только что созданного файла.
-response = map_request()
-map_file = load_image()
 
-# Переключаем экран и ждем закрытия окна.
-running = True
-vistrels = []
+gui = GUI()
+b1 = Button((10, 65, 150, 80), sloy[0])
+gui.add_element(b1)
 
 const_change, key, pressed = 0.5, None, False
+running = True
+changed = True
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
+        gui.get_event(event)
         key, pressed = update_map(event, key, pressed)
     lon, lat = move(const_change, lon, lat, spn, key, pressed)
 
-    response = map_request(lon, lat)
-    map_file = load_image()
+    if changed:
+        changed = False
+        response = map_request(lon, lat)
+        map_file = load_image()
+        screen.blit(pygame.image.load(map_file), (0, 0))
 
-    screen.blit(pygame.image.load(map_file), (0, 0))
+    gui.render(screen)
+    gui.update()
     pygame.display.flip()
-    pygame.time.wait(10)
 
 pygame.quit()
 # Удаляем за собой файл с изображением.
