@@ -7,15 +7,17 @@ def resize(spn, event):
     if event.key == pygame.K_PAGEUP:
         if spn * 1.8 > 90:
             spn = 90
+        elif spn < 1:
+            spn *= 3
         else:
             spn = spn * 1.8
     elif event.key == pygame.K_PAGEDOWN and spn*0.5 >= 0:
-        if 0.1 < spn < 1:
+        if 0.01 < spn < 1:
             spn *= 0.1
         elif spn > 1:
             spn *= 0.5
         else:
-            spn = 0.1
+            spn = 0.01
     print(spn)
     return spn
 
