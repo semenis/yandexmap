@@ -116,10 +116,20 @@ def map_request():
         print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
         sys.exit(1)
 
+def load_image():
+    map_file = "map.png"
+    try:
+        with open(map_file, "wb") as file:
+            file.write(response.content)
+        return map_file
+    except IOError as ex:
+        print("Ошибка записи временного файла:", ex)
+        sys.exit(2)
+     
 response = map_request()
 
 # Запишем полученное изображение в файл.
-map_file = "map.png"
+map_file = load_image()
 try:
     with open(map_file, "wb") as file:
         file.write(response.content)
@@ -149,7 +159,10 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        gui.get_event(event);
+        gui.get_event(event)
+     
+    response = map_request()
+    map_file = load_image()
     pygame.time.wait(10)
     screen.blit(pygame.image.load(map_file), (0, 0))
     # отрисовываем все GUI-элементы
