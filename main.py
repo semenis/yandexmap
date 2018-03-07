@@ -5,15 +5,16 @@ import os
 
 spn = 25
 lon, lat = 133.795384, -25.694768
+sloy = ("map", "sat", "skl")
+curr_sloy = sloy[0]
 
-
-def map_request():
+def map_request(lon=lon, lat=lat, spn=spn, map=curr_sloy):
     try:
         api_server = "http://static-maps.yandex.ru/1.x/"
         params = {
             "ll": ",".join([str(lon), str(lat)]),
             "spn": ",".join([str(spn), str(spn)]),
-            "l": "map"
+            "l": map
         }
         response = requests.get(api_server, params=params)
 
@@ -24,6 +25,7 @@ def map_request():
             sys.exit(1)
         return response
     except:
+        print(lon,lat)
         print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
         sys.exit(1)
 
@@ -39,7 +41,7 @@ def load_image():
         sys.exit(2)
 
 
-def move(event, const_change, lon, lat, key, pressed):
+def update_map(event, key, pressed):
     if event.type == pygame.KEYDOWN:
         if event.key in [pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT, pygame.K_UP]:
             key = event.key
@@ -48,23 +50,39 @@ def move(event, const_change, lon, lat, key, pressed):
         if event.key in [pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT, pygame.K_UP]:
             key = None
             pressed = False
+    return key, pressed
 
+
+def move(const_change, lon, lat, spn, key, pressed):
+    delta = None
     if pressed:
         if key == pygame.K_RIGHT:  #
-            lat += const_change
-
+            lon += const_change * spn
+            delta = "lon+"
         if key == pygame.K_DOWN:  #
-            lon -= const_change
-
+            lat -= const_change * spn
+            delta = lat
         if key == pygame.K_LEFT:  #
-            lat -= const_change
-
+            lon -= const_change * spn
+            delta = "lon-"
         if key == pygame.K_UP:  #
-            lon += const_change
-    return lon, lat, key, pressed
+            lat += const_change * spn
+            delta = lat
 
+    try:
+        map_request(lon=lon, lat=lat)
 
-# Инициализируем pygame
+    except:
+        if type(delta) == float:
+            lat = -lat
+        elif type(delta) == str:
+            if delta == "lon-":
+                lon += const_change * spn
+            else:
+                lon -= const_change * spn
+    finally:
+        return lon, lat
+
 
 
 pygame.init()
@@ -77,15 +95,17 @@ map_file = load_image()
 running = True
 vistrels = []
 
-const_change, key, pressed = 0.1, None, False
+const_change, key, pressed = 0.3, None, False
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        lon, lat, key, pressed = move(event,const_change, lon, lat, key, pressed)
-        print(lon, lat)
-    response = map_request()
+
+        key, pressed = update_map(event, key, pressed)
+    lon, lat = move(const_change, lon, lat, spn, key, pressed)
+    print(lon, lat)
+    response = map_request(lon, lat)
     map_file = load_image()
 
     screen.blit(pygame.image.load(map_file), (0, 0))
