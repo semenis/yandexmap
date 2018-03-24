@@ -3,6 +3,27 @@ import requests
 import sys
 import os
 
+def resize(spn, event):
+    if event.type == pygame.KEYDOWN:
+        global changed
+        if event.key == pygame.K_PAGEUP:
+            changed = True
+            if spn * 1.8 > 90:
+                spn = 90
+            elif spn < 1:
+                spn *= 3
+            else:
+                spn = spn * 1.8
+        elif event.key == pygame.K_PAGEDOWN and spn*0.5 >= 0:
+            changed = True
+            if 0.01 < spn < 1:
+                spn *= 0.1
+            elif spn > 1:
+                spn *= 0.5
+            else:
+                spn = 0.01
+    print(spn)
+    return spn
 
 ###GUI
 class Label:
@@ -104,7 +125,7 @@ sloy = ('map', 'sat', 'skl')
 curr_sloy = sloy[0]
 
 
-def map_request():
+def map_request(lon=lon, lat=lat, spn=spn, map=curr_sloy):
     try:
         api_server = "http://static-maps.yandex.ru/1.x/"
         params = {
@@ -113,7 +134,7 @@ def map_request():
             "l": curr_sloy
         }
         response = requests.get(api_server, params=params)
-        print(curr_sloy)
+
         if not response:
             print("Ошибка выполнения запроса:")
             print(map_request)
@@ -121,6 +142,7 @@ def map_request():
             sys.exit(1)
         return response
     except:
+        print(lon, lat)
         print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
         sys.exit(1)
 
@@ -136,6 +158,54 @@ def load_image():
         sys.exit(2)
 
 
+def update_map(event, key, pressed):
+    if event.type == pygame.KEYDOWN:
+        if event.key in [pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT, pygame.K_UP]:
+            key = event.key
+            pressed = True
+
+    if event.type == pygame.KEYUP:
+        if event.key in [pygame.K_RIGHT, pygame.K_DOWN, pygame.K_LEFT, pygame.K_UP]:
+            key = None
+            pressed = False
+    return key, pressed
+
+
+def move(const_change, lon, lat, spn, key, pressed):
+    delta = None
+    if pressed:
+        if key == pygame.K_RIGHT:  #
+            lon += const_change * spn
+            delta = lon - const_change * spn
+        if key == pygame.K_DOWN:  #
+            lat -= const_change * spn
+            delta = "lat+"
+        if key == pygame.K_LEFT:  #
+            lon -= const_change * spn
+            delta = lon + const_change * spn
+        if key == pygame.K_UP:  #
+            lat += const_change * spn
+            delta = "lat-"
+
+        global changed
+        changed = True
+
+    try:
+        map_request(lon=lon, lat=lat)
+
+    except:
+        if type(delta) == float:
+            lon = -(delta)
+
+        elif type(delta) == str:
+            if delta == "lat-":
+                lat -= const_change * spn
+            else:
+                lat += const_change * spn
+    finally:
+        return lon, lat
+
+
 response = map_request()
 
 # Запишем полученное изображение в файл.
@@ -145,15 +215,10 @@ pygame.init()
 screen = pygame.display.set_mode((600, 450))
 
 gui = GUI()
-
 b1 = Button((10, 65, 150, 80), sloy[0])
-
-# Рисуем картинку, загружаемую из только что созданного файла.
-screen.blit(pygame.image.load(map_file), (0, 0))
 gui.add_element(b1)
-# Переключаем экран и ждем закрытия окна.
-pygame.display.flip()
 
+const_change, key, pressed = 0.5, None, False
 running = True
 changed = True
 
@@ -162,10 +227,13 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         gui.get_event(event)
+        spn = resize(spn, event)
+        key, pressed = update_map(event, key, pressed)
+    lon, lat = move(const_change, lon, lat, spn, key, pressed)
 
     if changed:
         changed = False
-        response = map_request()
+        response = map_request(lon, lat, spn)
         map_file = load_image()
         screen.blit(pygame.image.load(map_file), (0, 0))
 
