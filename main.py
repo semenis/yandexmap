@@ -116,7 +116,36 @@ class Button(Label):
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self.pressed = False
 
+class TextBox(Label):
+    def __init__(self, rect, text):
+        super().__init__(rect, text)
+        self.active = True
+        self.blink = True
+        self.blink_timer = 0
 
+    def get_event(self, event):
+        if event.type == pygame.KEYDOWN and self.active:
+            if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self.execute()
+            elif event.key == pygame.K_BACKSPACE:
+                if len(self.text) > 0:
+                    self.text = self.text[:-1]
+            else:
+                self.text += event.unicode
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.active = self.rect.collidepoint(event.pos)
+
+    def update(self):
+                if pygame.time.get_ticks() - self.blink_timer > 200:
+                    self.blink = not self.blink
+                    self.blink_timer = pygame.time.get_ticks()
+
+    def render(self, surface):
+                super(TextBox, self).render(surface)
+                if self.blink and self.active:
+                    pygame.draw.line(surface, pygame.Color("black"),
+                                     (self.rendered_rect.right + 2, self.rendered_rect.top + 2),
+                                     (self.rendered_rect.right + 2, self.rendered_rect.bottom - 2))
 ####
 
 spn = 25
@@ -131,7 +160,7 @@ def map_request(lon=lon, lat=lat, spn=spn, map=curr_sloy):
         params = {
             "ll": ",".join([str(lon), str(lat)]),
             "spn": ",".join([str(spn), str(spn)]),
-            "l": curr_sloy
+            "l": map
         }
         response = requests.get(api_server, params=params)
 
@@ -232,8 +261,14 @@ while running:
     lon, lat = move(const_change, lon, lat, spn, key, pressed)
 
     if changed:
+        if curr_sloy == 'skl':
+            changed = False
+            response = map_request(lon, lat, spn, 'sat')
+            map_file = load_image()
+            screen.blit(pygame.image.load(map_file), (0, 0))
+
         changed = False
-        response = map_request(lon, lat, spn)
+        response = map_request(lon, lat, spn, curr_sloy)
         map_file = load_image()
         screen.blit(pygame.image.load(map_file), (0, 0))
 
