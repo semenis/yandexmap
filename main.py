@@ -68,7 +68,9 @@ class GUI:
         for element in self.elements:
             get_event = getattr(element, "get_event", None)
             if callable(get_event):
-                element.get_event(event)
+                bol = element.get_event(event)
+                if bol != None:
+                    return bol
 
 
 class Button(Label):
@@ -125,8 +127,13 @@ class TextBox(Label):
 
     def get_event(self, event):
         if event.type == pygame.KEYDOWN and self.active:
+            global changed
+            changed = True
             if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                self.execute()
+                s = self.text
+                self.text = ''
+                return s
+
             elif event.key == pygame.K_BACKSPACE:
                 if len(self.text) > 0:
                     self.text = self.text[:-1]
@@ -160,7 +167,8 @@ def map_request(lon=lon, lat=lat, spn=spn, map=curr_sloy):
         params = {
             "ll": ",".join([str(lon), str(lat)]),
             "spn": ",".join([str(spn), str(spn)]),
-            "l": map
+            "l": map,
+            "pt": "{0},pm2dgl".format(','.join([str(lon), str(lat)]))
         }
         response = requests.get(api_server, params=params)
 
@@ -174,6 +182,26 @@ def map_request(lon=lon, lat=lat, spn=spn, map=curr_sloy):
         print(lon, lat)
         print("Запрос не удалось выполнить. Проверьте наличие сети Интернет.")
         sys.exit(1)
+
+def geocode(name):
+    geocoder_api_server = "http://geocode-maps.yandex.ru/1.x/"
+
+    geocoder_params = {"geocode": name, "format": "json"}
+
+    response = requests.get(geocoder_api_server, params=geocoder_params)
+    if not response:
+        # обработка ошибочной ситуации
+        pass
+
+    # Преобразуем ответ в json-объект
+    json_response = response.json()
+    # Получаем первый топоним из ответа геокодера.
+    toponym = json_response["response"]["GeoObjectCollection"]["featureMember"][0]["GeoObject"]
+    # Координаты центра топонима:
+    toponym_coodrinates = toponym["Point"]["pos"]
+    # Долгота и Широта :
+    toponym_longitude, toponym_lattitude = toponym_coodrinates.split(" ")
+    return toponym_lattitude, toponym_longitude
 
 
 def load_image():
@@ -246,6 +274,8 @@ screen = pygame.display.set_mode((600, 450))
 gui = GUI()
 b1 = Button((10, 65, 150, 80), sloy[0])
 gui.add_element(b1)
+text = TextBox((10, 10, 150, 50), '')
+gui.add_element(text)
 
 const_change, key, pressed = 0.5, None, False
 running = True
@@ -255,7 +285,9 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        gui.get_event(event)
+        bol = gui.get_event(event)
+        if bol:
+            lat, lon = geocode(bol)
         spn = resize(spn, event)
         key, pressed = update_map(event, key, pressed)
     lon, lat = move(const_change, lon, lat, spn, key, pressed)
